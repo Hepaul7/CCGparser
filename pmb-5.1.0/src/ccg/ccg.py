@@ -40,6 +40,7 @@ def is_axiom(item: Item) -> bool:
     return item.i == item.j + 1
 
 
+
 def cky_forward(left: Item, right: Item) -> Union[None, Item]:
     """
     Applies the CKY style forward rule if possible
@@ -55,14 +56,15 @@ def cky_forward(left: Item, right: Item) -> Union[None, Item]:
     category = left.category
     # We need to get all possible parts, for example: A/B\C/D\F/G then
     # B\C/D\F/G, D\F/G, G are all possible arguments we can expect with different return types.
-
+    print(left, right)
     # TODO: no brackets assumed! Loop over cat using a stack, whatever inside a bracket replace with a special char
     parts = {category[:x.span()[0]]: category[x.span()[0] + 1:] for x in re.finditer(r'/([^/\\]+)', category)}
     for func_type, expected_arg in parts.items():
         right_category = right.category
         if right_category.startswith(expected_arg):
             β = right_category[len(expected_arg):]
-            new_category = f"{func_type}/{β}" if β else func_type
+            print()
+            new_category = f"{func_type}{β}" if β else func_type
             new_item = Item(new_category, left.i, right.j)
             return new_item
 
@@ -85,13 +87,12 @@ def cky_backward(left: Item, right: Item) -> Union[None, Item]:
     # B/C\\D\\F, C\D\\F, F are all possible arguments we can expect with different return types.
 
     parts = {category[:x.span()[0]]: category[x.span()[0] + 1:] for x in re.finditer(r'\\([^/\\]+)', category)}
-    print(left, right, parts)
     for func_type, expected_arg in parts.items():
         right_category = right.category
         # Check if the right category matches the expected argument
         if right_category.startswith(expected_arg):
             β = right_category[len(expected_arg):]
-            new_category = f"{func_type}\\{β}" if β else func_type
+            new_category = f"{func_type}{β}" if β else func_type
             new_item = Item(new_category, left.i, right.j)
             return new_item
 
@@ -113,16 +114,17 @@ def cky_backward_crossing(left: Item, right: Item) -> Union[None, Item]:
         # Check if the left category matches the expected argument
         if right_category.startswith(expected_arg):
             β = right_category[len(expected_arg):]
-            new_category = f"{func_type}" if β == "" else f"{func_type}\\{β}"
+            new_category = f"{func_type}" if β == "" else f"{func_type}{β}"
             new_item = Item(new_category, left.i, right.j)
             return new_item
 
     return None
 
+
 def cky_parse(lexicon: Dict[str, str], input_tokens: List[str]) -> Optional[Item]:
     """
     Parses a sentence from the given lexicon.
-
+    This algorithm runs exponential in the input length! See section 3.2 of Kuhlmann, Satta 2014
     :param lexicon: a dictionary mapping tokens (str) to a category (str)
     :param input_tokens: the input words (tokens) to be parsed
     :return: An Item representing the parse of the entire input, or None if no parse is possible.
@@ -142,20 +144,25 @@ def cky_parse(lexicon: Dict[str, str], input_tokens: List[str]) -> Optional[Item
             for k in range(i, j):
                 for left_item in chart[i][k]:
                     for right_item in chart[k + 1][j]:
-                        print(left_item, right_item)
                         new_item = cky_forward(left_item, right_item)
-                        if new_item:
+                        print(new_item)
+
+                        if (new_item and new_item.category[0] not in {'\\', '/'}
+                                and new_item.category[-1] not in {'\\', '/'}):
                             chart[i][j].append(new_item)
 
                         new_item = cky_backward(left_item, right_item)
-                        if new_item:
+                        if (new_item and new_item.category[0] not in {'\\', '/'}
+                                and new_item.category[-1] not in {'\\', '/'}):
                             chart[i][j].append(new_item)
 
                         new_item = cky_backward_crossing(left_item, right_item)
-                        if new_item:
+                        if (new_item and new_item.category[0] not in {'\\', '/'}
+                                and new_item.category[-1] not in {'\\', '/'}):
                             chart[i][j].append(new_item)
 
     # Look for a complete parse item [S;0,n]
+    print(chart)
     for item in chart[0][n - 1]:
         if item.category == "S":
             return item
@@ -172,6 +179,25 @@ lexicon = {
 input_tokens = ["the", "dog", "bit", "john"]
 
 # Parse the input tokens
+parsed_item = cky_parse(lexicon, input_tokens)
+
+if parsed_item:
+    print("Parsed Item:", parsed_item)
+else:
+    print("No valid parse found.")
+
+lexicon = {
+    "w1" : "A",
+    "w2" : "B",
+    "w3" : r"C\A/F",
+    "w4" : r"S\E",
+    "w5" : r"E/H\C",
+    "w6" : r"F/G\B",
+    "w7" : "G",
+    "w8" : "H"
+}
+
+input_tokens = [f"w{i}" for i in range(1, 9)]
 parsed_item = cky_parse(lexicon, input_tokens)
 
 if parsed_item:
