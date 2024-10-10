@@ -101,8 +101,8 @@ def cky_backward(left: Item, right: Item) -> Union[None, Item]:
 def cky_backward_crossing(left: Item, right: Item) -> Union[None, Item]:
     """
     Applies the CKY style backward crossing rule if possible.
-    :param left: left item in the form [X\Y, i, j]
-    :param right: right item in the form [Yβ, j, k]
+    :param left: left item in the form [Yβ, i, j]
+    :param right: right item in the form [X/Y, j, k]
     :return: new item in the form [Xβ, i, k] or None if not applicable.
     """
     category = right.category
