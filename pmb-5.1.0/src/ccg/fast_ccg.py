@@ -41,7 +41,6 @@ def ccg_extend(left: Item, right: Item, c_G: int) -> Union[None, Item, KuhlmannI
     parts.update(bwd_parts)
     for func_type, expected_arg in parts.items():
         right_category = right.category
-        print(func_type, expected_arg, right_category)
         if right_category.startswith(expected_arg):
             β = right_category[len(expected_arg):]
             new_category = f"{func_type}{β}" if β else func_type
@@ -51,7 +50,6 @@ def ccg_extend(left: Item, right: Item, c_G: int) -> Union[None, Item, KuhlmannI
             ar_xβ = new_item.category.count('/') + new_item.category.count('\\')
             if ar_xβ > c_G:
                 new_item = KuhlmannItem(category[len(func_type)] + expected_arg, β, left.i, left.i, right.i, right.j)
-            print('new item', new_item)
             return new_item
 
     return None
@@ -66,10 +64,8 @@ def ccg_backward_crossing(left: Item, right: Union[Item, KuhlmannItem]) -> Union
     :return: new item in the form [Xβ, i, k] or None if not applicable OR [/F, X, i, i', j', k]
     """
     category = right.β if isinstance(right, KuhlmannItem) else right.category
-    print(left.category, category, 'okdoqked')
     # Extract backward-slash components
     parts = {category[:x.span()[0]]: category[x.span()[0] + 1:] for x in re.finditer(r'\\([^/\\]+)', category)}
-    print(parts)
     for func_type, expected_arg in parts.items():
         right_category = left.category
         # Check if the left category matches the expected argument
@@ -80,7 +76,6 @@ def ccg_backward_crossing(left: Item, right: Union[Item, KuhlmannItem]) -> Union
                 new_item = KuhlmannItem(right.category, new_category, left.i, right.i_prime, right.j_prime, right.j)
             else:
                 new_item = Item(new_category, left.i, right.j)
-            print('nnew item', new_item)
             return new_item
     return None
 
@@ -99,17 +94,14 @@ def ccg_recombine(left: Item, right: KuhlmannItem, c_G: int) -> Union[None, Item
     parts = {category[:x.span()[0]]: category[x.span()[0]:] for x in re.finditer(r'/([^/\\]+)', category)}
     bwd_parts = {category[:x.span()[0]]: category[x.span()[0]:] for x in re.finditer(r'\\([^/\\]+)', category)}
     parts.update(bwd_parts)
-    print(parts)
     for func_type, expected_arg in parts.items():
         right_category = right.category
-        print(func_type, expected_arg, right_category)
         if right_category.startswith(expected_arg):
             β = right_category[len(expected_arg):]
             new_category = f"{func_type}{β}" if β else func_type
             new_item = Item(new_category, right.i, right.j)
             ar_xβ = new_item.category.count('/') + new_item.category.count('\\')
             if ar_xβ < c_G:
-                print('new k item', new_item)
                 return new_item
     return None  # should never hit this case if checks done properly in algorithm
 
@@ -182,7 +174,6 @@ def fast_ccg(lexicon: Dict[str, str], input_tokens: List[str]) -> Optional[Item]
             for k in range(i, j):
                 for left_item in chart[i][k]:
                     for right_item in chart[k + 1][j]:
-                        print(left_item, right_item, chart)
                         new_derivation_ctxt = None
 
                         # Check if you can apply the rules
@@ -215,14 +206,11 @@ def fast_ccg(lexicon: Dict[str, str], input_tokens: List[str]) -> Optional[Item]
 
                         # naively check if derivation ctxt can be recombined
                         if new_derivation_ctxt and new_derivation_ctxt.β == '':
-                            print('hahahaha', derivation_contexts)
                             if new_derivation_ctxt.category in derivation_contexts:
                                 left_ctxt = derivation_contexts[new_derivation_ctxt.category]
-                                print('xxxx', left_ctxt, new_derivation_ctxt)
                                 new_item = ccg_recombine(left_ctxt, new_derivation_ctxt, c_G)
                                 if new_item:
                                     chart[i][j].append(new_item)
-                                    print('sick', new_item)
 
     # Look for a complete parse item [S;0,n]
     print(chart)
@@ -232,27 +220,27 @@ def fast_ccg(lexicon: Dict[str, str], input_tokens: List[str]) -> Optional[Item]
     return None
 
 
-# left_item = KuhlmannItem('/Y', 'β/Z', 1, 1, 2, 2)
-# right_item = Item('Zγ', 2, 3)
-# ccg_derivation_ctxt_extend(left_item, right_item, 5)
+left_item = KuhlmannItem('/Y', 'β/Z', 1, 1, 2, 2)
+right_item = Item('Zγ', 2, 3)
+ccg_derivation_ctxt_extend(left_item, right_item, 5)
 
 
-# lexicon = {
-#     "the": "NP/N",
-#     "dog": "N",
-#     "john": "NP",
-#     "bit": r"S\NP/NP"
-# }
-#
-# input_tokens = ["the", "dog", "bit", "john"]
-#
-# # Parse the input tokens
-# parsed_item = fast_ccg(lexicon, input_tokens)
-#
-# if parsed_item:
-#     print("Parsed Item:", parsed_item)
-# else:
-#     print("No valid parse found.")
+lexicon = {
+    "the": "NP/N",
+    "dog": "N",
+    "john": "NP",
+    "bit": r"S\NP/NP"
+}
+
+input_tokens = ["the", "dog", "bit", "john"]
+
+# Parse the input tokens
+parsed_item = fast_ccg(lexicon, input_tokens)
+
+if parsed_item:
+    print("Parsed Item:", parsed_item)
+else:
+    print("No valid parse found.")
 
 
 #
