@@ -50,29 +50,37 @@ def ccg_extend(left: Item, right: Item, c_G: int) -> Union[None, Item]:
             ar_xβ = new_item.category.count('/') + new_item.category.count('\\')
             if ar_xβ > c_G:
                 new_item = KuhlmannItem(category[len(func_type)] + expected_arg, β, left.i, left.i, right.i, right.j)
+            print('new item', new_item)
             return new_item
 
     return None
 
 
 # TODO: ccg_backward crossing
-def ccg_backward_crossing(left: Item, right: Item) -> Union[None, Item]:
+def ccg_backward_crossing(left: Item, right: Union[Item, KuhlmannItem]) -> Union[None, Item, KuhlmannItem]:
     """
     Applies the CKY style backward crossing rule if possible.
     :param left: left item in the form [Yβ, i, j]
-    :param right: right item in the form [X/Y, j, k]
-    :return: new item in the form [Xβ, i, k] or None if not applicable.
+    :param right: right item in the form [X/Y, j, k] OR [/F, X/Y, j, i', j', k]
+    :return: new item in the form [Xβ, i, k] or None if not applicable OR [/F, X, i, i', j', k]
     """
-    category = right.category
+    category = right.β if isinstance(right, KuhlmannItem) else right.category
+    print(left.category, category, 'okdoqked')
     # Extract backward-slash components
     parts = {category[:x.span()[0]]: category[x.span()[0] + 1:] for x in re.finditer(r'\\([^/\\]+)', category)}
+    print(parts)
     for func_type, expected_arg in parts.items():
         right_category = left.category
         # Check if the left category matches the expected argument
         if right_category.startswith(expected_arg):
             β = right_category[len(expected_arg):]
             new_category = f"{func_type}" if β == "" else f"{func_type}{β}"
-            new_item = Item(new_category, left.i, right.j)
+            if isinstance(right, KuhlmannItem):
+                new_item = KuhlmannItem(right.category, new_category, left.i, right.i_prime, right.j_prime, right.j)
+            else:
+                new_item = Item(new_category, left.i, right.j)
+
+            print('nnew item', new_item)
             return new_item
     return None
 
