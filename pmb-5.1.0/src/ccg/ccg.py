@@ -19,26 +19,8 @@ class Item:
         return f"Item({self.category}, {self.i}, {self.j})"
 
 
-class KuhlmannItem(Item):
-    """
-    The type of item introduced in Kuhlmann and Satta 2014 algorithm to avoid exponential runtime.
-    [/Y, β, i, i', j', j]: for any category X, if we can build a derivation tree t' with yield w[i', j'] and type
-    X/Y, then we can also build the derivation tree t' with yield w[i, j] and type Xβ.
-
-    Similarly, [\\Y, β, i, i', j', j]: for any category X, if we can build a derivation tree t' with yield w[i, j']
-    and type Y\\X, then we can build a derivation tree t' with yield w[i, j] and type βX.
-    """
-
-    def __init__(self, category: str, β: str, i: int, i_prime: int, j_prime: int, j: int):
-        super().__init__(category, i, j)
-        self.β = β
-        self.i_prime = i_prime
-        self.j_prime = j_prime
-
-
 def is_axiom(item: Item) -> bool:
     return item.i == item.j + 1
-
 
 
 def cky_forward(left: Item, right: Item) -> Union[None, Item]:
@@ -56,14 +38,12 @@ def cky_forward(left: Item, right: Item) -> Union[None, Item]:
     category = left.category
     # We need to get all possible parts, for example: A/B\C/D\F/G then
     # B\C/D\F/G, D\F/G, G are all possible arguments we can expect with different return types.
-    print(left, right)
     # TODO: no brackets assumed! Loop over cat using a stack, whatever inside a bracket replace with a special char
     parts = {category[:x.span()[0]]: category[x.span()[0] + 1:] for x in re.finditer(r'/([^/\\]+)', category)}
     for func_type, expected_arg in parts.items():
         right_category = right.category
         if right_category.startswith(expected_arg):
             β = right_category[len(expected_arg):]
-            print()
             new_category = f"{func_type}{β}" if β else func_type
             new_item = Item(new_category, left.i, right.j)
             return new_item
@@ -117,7 +97,6 @@ def cky_backward_crossing(left: Item, right: Item) -> Union[None, Item]:
             new_category = f"{func_type}" if β == "" else f"{func_type}{β}"
             new_item = Item(new_category, left.i, right.j)
             return new_item
-
     return None
 
 
@@ -145,8 +124,6 @@ def cky_parse(lexicon: Dict[str, str], input_tokens: List[str]) -> Optional[Item
                 for left_item in chart[i][k]:
                     for right_item in chart[k + 1][j]:
                         new_item = cky_forward(left_item, right_item)
-                        print(new_item)
-
                         if (new_item and new_item.category[0] not in {'\\', '/'}
                                 and new_item.category[-1] not in {'\\', '/'}):
                             chart[i][j].append(new_item)
@@ -168,39 +145,38 @@ def cky_parse(lexicon: Dict[str, str], input_tokens: List[str]) -> Optional[Item
             return item
     return None
 
-
-lexicon = {
-    "the": "NP/N",
-    "dog": "N",
-    "john": "NP",
-    "bit": r"S\NP/NP"
-}
-
-input_tokens = ["the", "dog", "bit", "john"]
-
-# Parse the input tokens
-parsed_item = cky_parse(lexicon, input_tokens)
-
-if parsed_item:
-    print("Parsed Item:", parsed_item)
-else:
-    print("No valid parse found.")
-
-lexicon = {
-    "w1" : "A",
-    "w2" : "B",
-    "w3" : r"C\A/F",
-    "w4" : r"S\E",
-    "w5" : r"E/H\C",
-    "w6" : r"F/G\B",
-    "w7" : "G",
-    "w8" : "H"
-}
-
-input_tokens = [f"w{i}" for i in range(1, 9)]
-parsed_item = cky_parse(lexicon, input_tokens)
-
-if parsed_item:
-    print("Parsed Item:", parsed_item)
-else:
-    print("No valid parse found.")
+# lexicon = {
+#     "the": "NP/N",
+#     "dog": "N",
+#     "john": "NP",
+#     "bit": r"S\NP/NP"
+# }
+#
+# input_tokens = ["the", "dog", "bit", "john"]
+#
+# # Parse the input tokens
+# parsed_item = cky_parse(lexicon, input_tokens)
+#
+# if parsed_item:
+#     print("Parsed Item:", parsed_item)
+# else:
+#     print("No valid parse found.")
+#
+# lexicon = {
+#     "w1": "A",
+#     "w2": "B",
+#     "w3": r"C\A/F",
+#     "w4": r"S/E",
+#     "w5": r"E/H\C",
+#     "w6": r"F/G\B",
+#     "w7": "G",
+#     "w8": "H"
+# }
+#
+# input_tokens = [f"w{i}" for i in range(1, 9)]
+# parsed_item = cky_parse(lexicon, input_tokens)
+#
+# if parsed_item:
+#     print("Parsed Item:", parsed_item)
+# else:
+#     print("No valid parse found.")
