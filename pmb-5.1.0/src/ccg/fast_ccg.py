@@ -146,6 +146,18 @@ def ccg_derivation_ctxt_recombine(left: KuhlmannItem, right: KuhlmannItem, c_G):
     return KuhlmannItem(left.category, left.β[:start_idx], right.i, left.i_prime, left.j_prime, right.j)
 
 
+def compute_artiy_bound(lexicon: Dict[str, str]) -> int:
+    """
+    Computes the arity bound c_G given a lexicon
+    As defined in section 5.2 of the paper: c_G >= max{l, a + d}
+    where l is the maximum arity of a lexicon entry,
+    a is the maximum arity
+    d is the maximum degree of a composition
+    :param lexicon: a dictionary mapping tokens (str) to a category (str)
+    :return: The arity bound
+    """
+    raise NotImplementedError
+
 def fast_ccg(lexicon: Dict[str, str], input_tokens: List[str]) -> Optional[Item]:
     """
     Parses a sentence from the given lexicon.
@@ -205,6 +217,7 @@ def fast_ccg(lexicon: Dict[str, str], input_tokens: List[str]) -> Optional[Item]
                                 new_derivation_ctxt = new_item
 
                         # naively check if derivation ctxt can be recombined
+                        # TODO, rule 6
                         if new_derivation_ctxt and new_derivation_ctxt.β == '':
                             if new_derivation_ctxt.category in derivation_contexts:
                                 left_ctxt = derivation_contexts[new_derivation_ctxt.category]
