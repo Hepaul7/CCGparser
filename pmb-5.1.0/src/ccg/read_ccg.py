@@ -1,20 +1,6 @@
+import os
 import re
 FUNCTION_TYPES = {'rp', 'conj', 'lx', 'fa', 'gbc', 'gbxc', 'fc', 'op', 'bc', 'lp', 'ba', 'ccg', 't', 'bxc', 'fxc'}
-
-
-# def remove_parentheses(text):
-#     # Remove ')' if followed by ')' or ',' or '/' or '\'
-#     text = re.sub(r'\)(?=[),/\\])', '', text)
-    
-#     # Remove '(' if preceded by '(' or ',' or '/' or '\'
-#     text = re.sub(r'(?<=[(,/\\])\(', '', text)
-    
-#     return text
-
-
-# def remove_features(string):
-#     return re.sub(r':[^,/\\]*', '', string)
-
 
 
 def tokenize(expr):
@@ -24,21 +10,25 @@ def tokenize(expr):
     i = 0
     prev = ''
     sq = False
+    stack_count = 0
     while i < len(expr):
         char = expr[i]
         if char == '[':
             sq = True
-        if char == ']':
+            stack_count += 1
+        if char == ']' and stack_count == 1:
             sq = False
+            stack_count -= 1
+        elif char == ']':
+            stack_count -= 1
 
         if char.isspace():
             i += 1
             continue
 
         if char == ':' and not sq:
-            print('OK')
+        
             while char not in '/\\(),':
-                print(char)
                 i += 1
                 char = expr[i]
 
@@ -63,17 +53,33 @@ def tokenize(expr):
                 tokens.append(''.join(current_token))
                 current_token = []
             tokens.append(char)
-        elif char == "'":
+        # elif char == "'" and prev != "'":
+        #     current_token.append(char)
+        #     i += 1
+        #     while i < len(expr) and expr[i] != "'":
+        #         assert expr[i] != "/"
+        #         current_token.append(expr[i])
+        #         i += 1
+        #         char = expr[i]
+        #     assert expr[i] == "'"
+        #     current_token.append("'")  
+        #     char = expr[i]
+        #     tokens.append(''.join(current_token))
+        #     current_token = []
+        elif char == "'" and prev != "'":
             current_token.append(char)
             i += 1
-            while i < len(expr) and expr[i] != "'":
-                assert expr[i] != "/"
-                current_token.append(expr[i])
-                i += 1
-                char = expr[i]
-            assert expr[i] == "'"
-            current_token.append("'")  
-            char = expr[i]
+            while i < len(expr):
+                if expr[i] == "'" and expr[i-1] != "\\":
+                    break
+                elif expr[i] == "\\" and i + 1 < len(expr) and expr[i + 1] == "'":
+                    current_token.append("'")
+                    i += 2 
+                else:
+                    current_token.append(expr[i])
+                    i += 1
+            assert i < len(expr) and expr[i] == "'", f'Got {i}/{len(expr)} and {expr[i]}'
+            current_token.append("'")
             tokens.append(''.join(current_token))
             current_token = []
         else:
@@ -88,11 +94,8 @@ def tokenize(expr):
         
         i += 1
     
-    # Add any remaining token
     if current_token:
         tokens.append(''.join(current_token))
-    # print('TOKENS', tokens)
-    # print('END TOKENS')
     return tokens
 
 
@@ -100,25 +103,35 @@ def parse_tokens(tokens):
     """ Recursively parse tokens into a nested dictionary, correctly handling nested structures. """
     if not tokens:
         return None
+    
     token = tokens.pop(0)
     
-    if token in FUNCTION_TYPES:  
+    if token in FUNCTION_TYPES:
         func_name = token
-        tokens.pop(0)  # this pops (
+        tokens.pop(0)  # Assume this pops the opening '('
         args = []
-        while tokens[0] != ')':
-            if tokens[0] == '(':
-                ignore = True
-            if tokens[0] == ')':
-                ignore = False
-            # if func_name not in {'t', 'lx'}:
-            #     print(func_name, len(args), args)
+        nesting_level = 1  
+
+        while tokens:
+            current_token = tokens[0]
+            
+            if current_token == '(':
+                nesting_level += 1
+            elif current_token == ')':
+                nesting_level -= 1
+                if nesting_level == 0:
+                    tokens.pop(0)  # Pop closing ')'
+                    break
+            
+            # Skip commas that are within nested structures
+            if current_token == ',' and nesting_level > 1:
+                tokens.pop(0)  
+                continue
+            
             arg = parse_tokens(tokens)
             if arg is not None:
                 args.append(arg)
-        tokens.pop(0)
-        # if func_name == 'ba': 
-        #     print({func_name: len(args)})
+        
         return {func_name: args}
 
     if token == ')':  
@@ -140,7 +153,7 @@ def parse_tokens(tokens):
 def parse_prolog_to_dict(expr):
     tokens = tokenize(expr)
     # for token in tokens:
-        # print(token)
+    #     print(token)
     return parse_tokens(tokens)
 
 
@@ -218,20 +231,20 @@ def extract_inference_tree(ccg_dict):
 #     t(., '.', [lemma:'.', from:19, to:20, pos:'.', sem:'NIL', wordnet:'O'])))))
 # """
 
-input_str = r"""
- ccg(1,
- ba(s:dcl,
-  fa(np,
-   t(np/n, 'A', [lemma:'a', from:0, to:1, pos:'DT', sem:'DIS', wordnet:'O']),
-   fa(n,
-    t(n/n, 'big', [lemma:'big', from:2, to:5, pos:'JJ', sem:'DEG', wordnet:'big.a.01', verbnet:['Attribute']]),
-    t(n, 'typhoon', [lemma:'typhoon', from:6, to:13, pos:'NN', sem:'CON', wordnet:'typhoon.n.01']))),
-  fa(s:dcl\np,
-   t((s:dcl\np)/(s:ng\np), 'is', [lemma:'be', from:14, to:16, pos:'VBZ', sem:'NOW', wordnet:'O']),
-   rp(s:ng\np,
-    t(s:ng\np, 'approaching', [lemma:'approach', from:17, to:28, pos:'VBG', sem:'EXG', wordnet:'approach.v.04', verbnet:['Theme']]),
-    t(., '.', [lemma:'.', from:28, to:29, pos:'.', sem:'NIL', wordnet:'O']))))).
-"""
+# input_str = r"""
+#  ccg(1,
+#  ba(s:dcl,
+#   fa(np,
+#    t(np/n, 'A', [lemma:'a', from:0, to:1, pos:'DT', sem:'DIS', wordnet:'O']),
+#    fa(n,
+#     t(n/n, 'big', [lemma:'big', from:2, to:5, pos:'JJ', sem:'DEG', wordnet:'big.a.01', verbnet:['Attribute']]),
+#     t(n, 'typhoon', [lemma:'typhoon', from:6, to:13, pos:'NN', sem:'CON', wordnet:'typhoon.n.01']))),
+#   fa(s:dcl\np,
+#    t((s:dcl\np)/(s:ng\np), 'is', [lemma:'be', from:14, to:16, pos:'VBZ', sem:'NOW', wordnet:'O']),
+#    rp(s:ng\np,
+#     t(s:ng\np, 'approaching', [lemma:'approach', from:17, to:28, pos:'VBG', sem:'EXG', wordnet:'approach.v.04', verbnet:['Theme']]),
+#     t(., '.', [lemma:'.', from:28, to:29, pos:'.', sem:'NIL', wordnet:'O']))))).
+# """
 
 
 # input_str = r"""
@@ -283,14 +296,86 @@ input_str = r"""
 #     t(np, 'he', [lemma:'male', from:7, to:9, pos:'PRP', sem:'PRO', wordnet:'male.n.02'])),
 #    t(., '?', [lemma:'?', from:9, to:10, pos:'.', sem:'QUE', wordnet:'O'])))).
 #  """
-# Parse the input string
+
+
+# input_str = r"""
+#  ccg(1,
+#  ba(s:dcl,
+#   ba(s:dcl,
+#    t(np, 'I', [lemma:'speaker', from:0, to:1, pos:'PRP', sem:'PRO', wordnet:'O', verbnet:['Equal']]),
+#    fa(s:dcl\np,
+#     t((s:dcl\np)/(s:adj\np), '\'m', [lemma:'be', from:1, to:3, pos:'VBP', sem:'NOW', wordnet:'O']),
+#     t(s:adj\np, 'sorry', [lemma:'sorry', from:4, to:9, pos:'JJ', sem:'IST', wordnet:'sorry.a.01', verbnet:['Theme']]))),
+#   conj(s:dcl\s:dcl,
+#    t(conj, ',', [lemma:',', from:9, to:10, pos:',', sem:'NIL', wordnet:'O']),
+#    ba(s:dcl,
+#     ba(s:dcl,
+#      t(np, 'I', [lemma:'speaker', from:11, to:12, pos:'PRP', sem:'PRO', wordnet:'O', verbnet:['Equal']]),
+#      fa(s:dcl\np,
+#       t((s:dcl\np)/pr, 'fucked', [lemma:'fuck~up', from:13, to:19, pos:'VBD', sem:'EPS', wordnet:'fuck_up.v.01', verbnet:['Agent']]),
+#       t(pr, 'up', [lemma:'up', from:20, to:22, pos:'RP', sem:'REL', wordnet:'O']))),
+#     t(s:dcl\s:dcl, '.', [lemma:'.', from:22, to:23, pos:'.', sem:'NIL', wordnet:'O'])))))."""
+
+input_str = r"""
+ ccg(1,
+ ba(s:dcl,
+  fa(np,
+   t(np/n, 'A', [lemma:'a', from:0, to:1, pos:'DT', sem:'DIS', wordnet:'O']),
+   t(n, 'boy', [lemma:'boy', from:2, to:5, pos:'NN', sem:'CON', wordnet:'boy.n.01'])),
+  fa(s:dcl\np,
+   t((s:dcl\np)/(s:ng\np), 'is', [lemma:'be', from:6, to:8, pos:'VBZ', sem:'NOW', wordnet:'O']),
+   fa(s:ng\np,
+    t((s:ng\np)/np, 'styling', [lemma:'style', from:9, to:16, pos:'VBG', sem:'EXG', wordnet:'style.v.02', verbnet:['Patient','Agent']]),
+    fa(np,
+     t(np/n, 'his', [lemma:'male', from:17, to:20, pos:'PRP$', sem:'HAS', wordnet:'male.n.02', verbnet:['PartOf'], antecedent:'2,5']),
+     t(n, 'hair', [lemma:'hair', from:21, to:25, pos:'NN', sem:'CON', wordnet:'hair.n.01'])))))).
+"""
 parsed_result = parse_prolog_to_dict(input_str)
 # print(parsed_result)
 print_recursive(parsed_result)
 # print_rules(parsed_result)
 # print(extract_derivation_tree(parsed_result))
 # print_recursive(extract_derivation_tree(parsed_result))
-
 inference_tree, r = extract_inference_tree(parsed_result)
-print(inference_tree, r)
+# print(inference_tree, r)
 
+
+
+
+
+
+def traverse_directory_for_parse_items(directory_path: str):
+    """
+    Traverses a directory and extracts function types from all `.ccg` files.
+
+    :param directory_path: Path to the directory containing `.ccg` files.
+    :return: A set of all unique function types found across all `.ccg` files.
+    """
+    count = 0
+    total = 0
+    for root, dirs, files in os.walk(directory_path):
+        # print(files)
+        for file in files:
+            # print(file)
+            if file.endswith(".ccg"):
+                print(file)
+                total += 1
+                # print('ok', all_function_types)
+                file_path = os.path.join(root, file)
+                with open(file_path, "r") as f:
+                    prolog_code = f.read()
+                    match = re.search(r'ccg\(.*', prolog_code, re.DOTALL)
+                    if match and 'lx' not in match.group(0):
+                        count += 1
+                        result = match.group(0)
+                        print(result)
+                        parsed_result = parse_prolog_to_dict(result)
+                        print_recursive(parsed_result)
+                        inference_tree, r = extract_inference_tree(parsed_result)
+        print(f'NO LX: {count}; TOTAL: {total}')
+
+
+directory_path = "/Users/paulhe/Desktop/CCG Parsing/pmb-5.1.0/src/ccg/standard"
+traverse_directory_for_parse_items(directory_path)
+
+        
