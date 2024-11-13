@@ -23,22 +23,42 @@ def tokenize(expr):
     current_token = []
     i = 0
     prev = ''
+    sq = False
     while i < len(expr):
         char = expr[i]
-        
+        if char == '[':
+            sq = True
+        if char == ']':
+            sq = False
+
         if char.isspace():
             i += 1
             continue
-        
-        if prev in r"(\/" and char == '(':
-            i += 1
-            prev = char
-            continue
+
+        if char == ':' and not sq:
+            print('OK')
+            while char not in '/\\(),':
+                print(char)
+                i += 1
+                char = expr[i]
+
+        # if prev == '/':
+        #     print(f'prev: {prev} curr: {char}')
+        if (prev == '/' or prev == '\\' or prev == '(') and char == '(':
+            # i += 1
+            # prev = char
+            # continue
+            char = '<'
         elif prev.isalpha() and char == ')':
-            i += 1
-            prev = char
-            continue
-        elif char in '(),':
+            # i += 1
+            # prev = char
+            # continue
+            char = '>'
+
+        # if char == '/':
+        #     print(char, prev)
+
+        if char in '(),':
             if current_token:
                 tokens.append(''.join(current_token))
                 current_token = []
@@ -47,23 +67,32 @@ def tokenize(expr):
             current_token.append(char)
             i += 1
             while i < len(expr) and expr[i] != "'":
+                assert expr[i] != "/"
                 current_token.append(expr[i])
                 i += 1
+                char = expr[i]
+            assert expr[i] == "'"
             current_token.append("'")  
+            char = expr[i]
             tokens.append(''.join(current_token))
             current_token = []
         else:
             current_token.append(char)
         
-        prev = char
+        if char not in '<>':
+            prev = char
+        elif char == '<':
+            prev = '('
+        else:
+            prev = ')'
         
         i += 1
     
     # Add any remaining token
     if current_token:
         tokens.append(''.join(current_token))
-    print('TOKENS', tokens)
-    print('END TOKENS')
+    # print('TOKENS', tokens)
+    # print('END TOKENS')
     return tokens
 
 
@@ -205,7 +234,7 @@ input_str = r"""
 """
 
 
-# input_str = """
+# input_str = r"""
 #  ccg(1,
 #  fa(s:q,
 #   fa(s:q/np,
