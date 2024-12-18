@@ -152,7 +152,7 @@ def ccg_derivation_ctxt_extend(left: KuhlmannItem, right: Item, c_G: int) -> Uni
             new_item = KuhlmannItem(left.category, new_category, left.i, left.i_prime, left.j_prime, right.j)
             ar_Yβγ = left.category.count('/') + left.category.count('\\') + new_item.category.count('/') + new_item.category.count('\\')
             if ar_Yβγ > c_G:
-                new_item = KuhlmannItem(f"/{expected_arg}", γ, left.i, left.i, right.j, right.k)
+                new_item = KuhlmannItem(f"/{expected_arg}", γ, left.i, left.i, right.j, right.j)
             return new_item
     return None
 
@@ -214,8 +214,10 @@ def fast_ccg(lexicon: Dict[str, str], input_tokens: List[str]) -> Optional[Item]
                     for right_item in chart[k + 1][j]:
                         new_derivation_ctxt = None      
                         # Check if you can apply the rules
+                        # this rule should only be applied in case of KulhmannItem
                         new_item = ccg_extend(left_item, right_item, c_G)
-                        if (new_item and new_item.category[0] not in {'\\', '/'}
+                        # print(new_item, left_item, right_item)
+                        if (new_item and new_item.category and new_item.category[0] not in {'\\', '/'}
                                 and new_item.category[-1] not in {'\\', '/'}):
                             chart[i][j].append(new_item)
 
@@ -227,7 +229,7 @@ def fast_ccg(lexicon: Dict[str, str], input_tokens: List[str]) -> Optional[Item]
 
                         # check if you can apply backward crossing
                         new_item = ccg_backward_crossing(left_item, right_item)
-                        if (new_item and new_item.category[0] not in {'\\', '/'}
+                        if (new_item and new_item.category and new_item.category[0] not in {'\\', '/'}
                                 and new_item.category[-1] not in {'\\', '/'}):
                             chart[i][j].append(new_item)
                         elif isinstance(new_item, KuhlmannItem):
@@ -237,7 +239,7 @@ def fast_ccg(lexicon: Dict[str, str], input_tokens: List[str]) -> Optional[Item]
                         # check if you can extend a derivation context:
                         if isinstance(left_item, KuhlmannItem) and isinstance(right_item, Item):
                             new_item = ccg_derivation_ctxt_extend(left_item, right_item, c_G)
-                            if isinstance(new_item, KuhlmannItem):
+                            if isinstance(new_item, KuhlmannItem) and new_item.category:
                                 chart[i][j].append(new_item)
                                 new_derivation_ctxt = new_item
 
@@ -247,15 +249,16 @@ def fast_ccg(lexicon: Dict[str, str], input_tokens: List[str]) -> Optional[Item]
                             if new_derivation_ctxt.category in derivation_contexts:
                                 left_ctxt = derivation_contexts[new_derivation_ctxt.category]
                                 new_item = ccg_recombine(left_ctxt, new_derivation_ctxt, c_G)
-                                if new_item:
+                                if new_item and new_item.category:
                                     chart[i][j].append(new_item)
 
     # Look for a complete parse item [S;0,n]
-    print(chart)
-    for item in chart[0][n - 1]:
-        if item.category == "S":
-            return item
-    return None
+    # print(chart)
+    return sum(1 for item in chart[0][n - 1] if item.category == "S"), chart
+    # for item in chart[0][n - 1]:
+    #     if item.category == "S":
+    #         return item
+    # return chart
 
 
 # left_item = KuhlmannItem('/Y', 'β/Z', 1, 1, 2, 2)
