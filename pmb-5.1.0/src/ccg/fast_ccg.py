@@ -22,6 +22,27 @@ class KuhlmannItem(Item):
     def __repr__(self):
         return f"KuhlmannItem({self.category}, {self.β}, {self.i}, {self.i_prime}, {self.j_prime}, {self.j})"
 
+def split_category(category: str) -> List[str]:
+    parts = []
+    stack = []
+    i = 0
+    while i < len(category):
+        if category[i] == '(':
+            stack.append(i)
+        elif category[i] == ')':
+            start = stack.pop()
+            if not stack:  # Top-level parentheses
+                parts.append(category[start + 1:i])
+        elif category[i] in '/\\' and not stack:  # Split at / or \ only at top level
+            parts.append(category[:i])
+            category = category[i + 1:]
+            i = 0
+            continue
+        i += 1
+    if category:
+        parts.append(category)  # Remaining part if no split happens
+    return parts
+
 
 def ccg_extend(left: Item, right: Item, c_G: int) -> Union[None, Item, KuhlmannItem]:
     """
@@ -35,9 +56,13 @@ def ccg_extend(left: Item, right: Item, c_G: int) -> Union[None, Item, KuhlmannI
     category = left.category
     # We need to get all possible parts, for example: A/B\C/D\F/G then
     # B\C/D\F/G, D\F/G, G are all possible arguments we can expect with different return types.
-    # TODO: no brackets assumed! Loop over cat using a stack, whatever inside a bracket replace with a special char
     parts = {category[:x.span()[0]]: category[x.span()[0] + 1:] for x in re.finditer(r'/([^/\\]+)', category)}
     bwd_parts = {category[:x.span()[0]]: category[x.span()[0] + 1:] for x in re.finditer(r'\\([^/\\]+)', category)}
+    # print(category)
+    # parts = split_category(category)
+    # print(parts)
+    # bwd_parts = {category[:x.span()[0]]: category[x.span()[0] + 1:] for x in re.finditer(r'\\([^/\\]+)', category)}
+
     parts.update(bwd_parts)
     for func_type, expected_arg in parts.items():
         right_category = right.category
@@ -170,6 +195,7 @@ def fast_ccg(lexicon: Dict[str, str], input_tokens: List[str]) -> Optional[Item]
     chart = [[[] for _ in range(n)] for _ in range(n)]
 
     # TODO: compute arity bound, for now, hard code arity bound
+    # c_G = compute_arity_bound(lexicon)
     c_G = 3
 
     # Parse axioms CKY style
@@ -186,8 +212,7 @@ def fast_ccg(lexicon: Dict[str, str], input_tokens: List[str]) -> Optional[Item]
             for k in range(i, j):
                 for left_item in chart[i][k]:
                     for right_item in chart[k + 1][j]:
-                        new_derivation_ctxt = None
-
+                        new_derivation_ctxt = None      
                         # Check if you can apply the rules
                         new_item = ccg_extend(left_item, right_item, c_G)
                         if (new_item and new_item.category[0] not in {'\\', '/'}
@@ -233,27 +258,27 @@ def fast_ccg(lexicon: Dict[str, str], input_tokens: List[str]) -> Optional[Item]
     return None
 
 
-left_item = KuhlmannItem('/Y', 'β/Z', 1, 1, 2, 2)
-right_item = Item('Zγ', 2, 3)
-ccg_derivation_ctxt_extend(left_item, right_item, 5)
-
-
-lexicon = {
-    "the": "NP/N",
-    "dog": "N",
-    "john": "NP",
-    "bit": r"S\NP/NP"
-}
-
-input_tokens = ["the", "dog", "bit", "john"]
-
-# Parse the input tokens
-parsed_item = fast_ccg(lexicon, input_tokens)
-
-if parsed_item:
-    print("Parsed Item:", parsed_item)
-else:
-    print("No valid parse found.")
+# left_item = KuhlmannItem('/Y', 'β/Z', 1, 1, 2, 2)
+# right_item = Item('Zγ', 2, 3)
+# ccg_derivation_ctxt_extend(left_item, right_item, 5)
+#
+#
+# lexicon = {
+#     "the": "NP/N",
+#     "dog": "N",
+#     "john": "NP",
+#     "bit": r"S\NP/NP"
+# }
+#
+# input_tokens = ["the", "dog", "bit", "john"]
+#
+# # Parse the input tokens
+# parsed_item = fast_ccg(lexicon, input_tokens)
+#
+# if parsed_item:
+#     print("Parsed Item:", parsed_item)
+# else:
+#     print("No valid parse found.")
 
 
 #
@@ -276,3 +301,34 @@ if parsed_item:
 else:
     print("No valid parse found.")
 
+#
+# lexicon = {
+#     'Is': "S/NP/NP",
+#     'this': "NP",
+#     'your': "NP/N",
+#     'bicycle': "N/Q",
+#     '?': "Q"
+# }
+#
+# input_tokens = ['Is', 'this', 'your', 'bicycle', '?']
+# parsed_item = fast_ccg(lexicon, input_tokens)
+#
+# if parsed_item:
+#     print("Parsed Item:", parsed_item)
+# else:
+#     print("No valid parse found.")
+#
+#
+# lexicon = {
+#     'Who': "S/(S/NP)",
+#     'is': "(S/NP)/NP",
+#     'he?': "NP",
+# }
+#
+# input_tokens = ['Who', 'is', 'he?']
+# parsed_item = fast_ccg(lexicon, input_tokens)
+#
+# if parsed_item:
+#     print("Parsed Item:", parsed_item)
+# else:
+#     print("No valid parse found.")

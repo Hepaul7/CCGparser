@@ -48,7 +48,12 @@ def traverse_directory_for_function_types(directory_path: str):
     return all_function_types, sample_files
 
 
-directory_path = "/Users/paulhe/Desktop/CCG Parsing/pmb-5.1.0/src/ccg/standard"
+# directory_path = "/Users/paulhe/Desktop/CCG Parsing/pmb-5.1.0/src/ccg/standard"
+# directory_path = "/Users/paulhe/Desktop/CCG Parsing/pmb-5.1.0/src/ccg/de_ccg"
+# directory_path = "/Users/paulhe/Desktop/CCG Parsing/pmb-5.1.0/src/ccg/nl_ccg"
+# dutch has generalized foward crossing
+directory_path = "/Users/paulhe/Desktop/CCG Parsing/pmb-5.1.0/src/ccg/it_ccg"
+
 function_types, difference_dict = traverse_directory_for_function_types(directory_path)
 print("Function types found:", function_types)
 print("Example of each rule:", difference_dict)

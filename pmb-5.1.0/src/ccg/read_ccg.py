@@ -1,7 +1,8 @@
 import os
 import re
 FUNCTION_TYPES = {'rp', 'conj', 'lx', 'fa', 'gbc', 'gbxc', 'fc', 'op', 'bc', 'lp', 'ba', 'ccg', 't', 'bxc', 'fxc'}
-
+# FUNCTION_TYPES = {'bxc', 'gfxc', 't', 'fa', 'fxc', 'lx', 'conj', 'op', 'bc', 'fc', 'ccg', 'gbxc', 'ba'}
+# FUNCTION_TYPES = {'ba', 'fa', 'fxc', 't', 'ccg', 'bxc', 'op', 'conj', 'fc', 'bc', 'lx'}
 
 def tokenize(expr):
     """Convert input string into a list of tokens."""
@@ -213,7 +214,7 @@ def extract_inference_tree(ccg_dict):
             return {category: [l_args]}, None
         
 
-
+# TODO: LOOK into dutch
 
 # Input string
 # input_str = """
@@ -330,18 +331,31 @@ input_str = r"""
      t(np/n, 'his', [lemma:'male', from:17, to:20, pos:'PRP$', sem:'HAS', wordnet:'male.n.02', verbnet:['PartOf'], antecedent:'2,5']),
      t(n, 'hair', [lemma:'hair', from:21, to:25, pos:'NN', sem:'CON', wordnet:'hair.n.01'])))))).
 """
-parsed_result = parse_prolog_to_dict(input_str)
-# print(parsed_result)
-print_recursive(parsed_result)
-# print_rules(parsed_result)
-# print(extract_derivation_tree(parsed_result))
-# print_recursive(extract_derivation_tree(parsed_result))
-inference_tree, r = extract_inference_tree(parsed_result)
-# print(inference_tree, r)
+# parsed_result = parse_prolog_to_dict(input_str)
+# # print(parsed_result)
+# # print_recursive(parsed_result)
+# # print_rules(parsed_result)
+# # print(extract_derivation_tree(parsed_result))
+# # print_recursive(extract_derivation_tree(parsed_result))
+# inference_tree, r = extract_inference_tree(parsed_result)
+# # print(inference_tree, r)
+#
+# def extract_words_and_categories(data):
+#     word_category_map = {}
 
+#     if isinstance(data, dict):
+#         for key, value in data.items():
+#             if isinstance(value, list):
+#                 for item in value:
+#                     if isinstance(item, dict):
+#                         if 't' in item:
+#                             for elem in item['t']:
+#                                 if isinstance(elem, str) and '/' in elem:  
+#                                     word_category_map[elem] = key
+#             elif isinstance(value, str) and '/' in value: 
+#                 word_category_map[value] = key
 
-
-
+#     return word_category_map
 
 
 def traverse_directory_for_parse_items(directory_path: str):
@@ -368,14 +382,19 @@ def traverse_directory_for_parse_items(directory_path: str):
                     if match and 'lx' not in match.group(0):
                         count += 1
                         result = match.group(0)
-                        print(result)
+                        # print(result)
                         parsed_result = parse_prolog_to_dict(result)
-                        print_recursive(parsed_result)
+                        # print_recursive(parsed_result)
                         inference_tree, r = extract_inference_tree(parsed_result)
+                        print(inference_tree)
         print(f'NO LX: {count}; TOTAL: {total}')
 
 
-directory_path = "/Users/paulhe/Desktop/CCG Parsing/pmb-5.1.0/src/ccg/standard"
-traverse_directory_for_parse_items(directory_path)
-
-        
+# directory_path = "/Users/paulhe/Desktop/CCG Parsing/pmb-5.1.0/src/ccg/standard"
+# directory_path = "/Users/paulhe/Desktop/CCG Parsing/pmb-5.1.0/src/ccg/de_ccg"
+# directory_path = "/Users/paulhe/Desktop/CCG Parsing/pmb-5.1.0/src/ccg/nl_ccg"
+# directory_path = "/Users/paulhe/Desktop/CCG Parsing/pmb-5.1.0/src/ccg/it_ccg"
+#
+# traverse_directory_for_parse_items(directory_path)
+#
+#
