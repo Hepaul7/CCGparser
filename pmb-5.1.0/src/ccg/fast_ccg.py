@@ -176,12 +176,13 @@ def compute_artiy_bound(lexicon: Dict[str, str]) -> int:
     Computes the arity bound c_G given a lexicon
     As defined in section 5.2 of the paper: c_G >= max{l, a + d}
     where l is the maximum arity of a lexicon entry,
-    a is the maximum arity
-    d is the maximum degree of a composition
+    a is the maximum arity of an argument 
+    d is the maximum degree of a composition rule
     :param lexicon: a dictionary mapping tokens (str) to a category (str)
     :return: The arity bound
     """
-    raise NotImplementedError
+    d = max(entry.count('/') + entry.count('\\') for k, entry in lexicon.items())
+    return max(d, d + 1)  # okay so wouldnt it always be a + d??
 
 def fast_ccg(lexicon: Dict[str, str], input_tokens: List[str]) -> Optional[Item]:
     """
@@ -194,9 +195,9 @@ def fast_ccg(lexicon: Dict[str, str], input_tokens: List[str]) -> Optional[Item]
     n = len(input_tokens)
     chart = [[[] for _ in range(n)] for _ in range(n)]
 
-    # TODO: compute arity bound, for now, hard code arity bound
     # c_G = compute_arity_bound(lexicon)
-    c_G = 3
+    c_G = compute_artiy_bound(lexicon)
+    # print(c_G)
 
     # Parse axioms CKY style
     for j in range(n):
@@ -206,6 +207,8 @@ def fast_ccg(lexicon: Dict[str, str], input_tokens: List[str]) -> Optional[Item]
             chart[j][j].append(Item(category, j, j + 1))
 
     derivation_contexts = {}
+    # track number of edges
+    total_edges, num_km_edges = 0, 0
     for length in range(2, n + 1):
         for i in range(n - length + 1):
             j = i + length - 1
@@ -220,11 +223,14 @@ def fast_ccg(lexicon: Dict[str, str], input_tokens: List[str]) -> Optional[Item]
                         if (new_item and new_item.category and new_item.category[0] not in {'\\', '/'}
                                 and new_item.category[-1] not in {'\\', '/'}):
                             chart[i][j].append(new_item)
+                            total_edges += 1
 
                         # check if derivation ctxt
                         if isinstance(new_item, KuhlmannItem):
                             derivation_contexts.setdefault(new_item.category, left_item)
                             chart[i][j].append(new_item)
+                            num_km_edges += 1
+                            total_edges += 1
                             new_derivation_ctxt = new_item
 
                         # check if you can apply backward crossing
@@ -232,9 +238,12 @@ def fast_ccg(lexicon: Dict[str, str], input_tokens: List[str]) -> Optional[Item]
                         if (new_item and new_item.category and new_item.category[0] not in {'\\', '/'}
                                 and new_item.category[-1] not in {'\\', '/'}):
                             chart[i][j].append(new_item)
+                            total_edges += 1
                         elif isinstance(new_item, KuhlmannItem):
                             chart[i][j].append(new_item)
                             new_derivation_ctxt = new_item
+                            num_km_edges += 1
+                            total_edges += 1
 
                         # check if you can extend a derivation context:
                         if isinstance(left_item, KuhlmannItem) and isinstance(right_item, Item):
@@ -242,6 +251,8 @@ def fast_ccg(lexicon: Dict[str, str], input_tokens: List[str]) -> Optional[Item]
                             if isinstance(new_item, KuhlmannItem) and new_item.category:
                                 chart[i][j].append(new_item)
                                 new_derivation_ctxt = new_item
+                                num_km_edges += 1
+                                total_edges += 1
 
                         # naively check if derivation ctxt can be recombined
                         # TODO, rule 6
@@ -250,11 +261,14 @@ def fast_ccg(lexicon: Dict[str, str], input_tokens: List[str]) -> Optional[Item]
                                 left_ctxt = derivation_contexts[new_derivation_ctxt.category]
                                 new_item = ccg_recombine(left_ctxt, new_derivation_ctxt, c_G)
                                 if new_item and new_item.category:
+                                    if isinstance(new_item, KuhlmannItem):
+                                        num_km_edges += 1
+                                        num_edges += 1
                                     chart[i][j].append(new_item)
 
     # Look for a complete parse item [S;0,n]
     # print(chart)
-    return sum(1 for item in chart[0][n - 1] if item.category == "S"), chart
+    return sum(1 for item in chart[0][n - 1] if item.category == "S"), chart, total_edges, num_km_edges
     # for item in chart[0][n - 1]:
     #     if item.category == "S":
     #         return item
