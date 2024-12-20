@@ -60,37 +60,12 @@ def human_readable_format_tree(ccg_entries):
                 stack.append(combined_category)
     return "\n".join(tree_output)
 
-# ccg_text = r"""
-# #  ccg(1,
-# #  ba(s:dcl,
-# #   fa(np,
-# #    t(np/n, 'A', [lemma:'a', from:0, to:1, pos:'DT', sem:'DIS', wordnet:'O']),
-# #    t(n, 'boy', [lemma:'boy', from:2, to:5, pos:'NN', sem:'CON', wordnet:'boy.n.01'])),
-# #   fa(s:dcl\np,
-# #    t((s:dcl\np)/(s:ng\np), 'is', [lemma:'be', from:6, to:8, pos:'VBZ', sem:'NOW', wordnet:'O']),
-# #    fa(s:ng\np,
-# #     t((s:ng\np)/np, 'styling', [lemma:'style', from:9, to:16, pos:'VBG', sem:'EXG', wordnet:'style.v.02', verbnet:['Patient','Agent']]),
-# #     fa(np,
-# #      t(np/n, 'his', [lemma:'male', from:17, to:20, pos:'PRP$', sem:'HAS', wordnet:'male.n.02', verbnet:['PartOf'], antecedent:'2,5']),
-# #      t(n, 'hair', [lemma:'hair', from:21, to:25, pos:'NN', sem:'CON', wordnet:'hair.n.01'])))))).
-# # """
-# ccg_entries_simple = parse_ccg_structure(ccg_text)
-# lexicon = {x:y for x, y in ccg_entries_simple}
-# # lexicon = {word: category.replace('(', '').replace(')', '') for word, category in lexicon.items()}
-# input_tokens = [x[0] for x in ccg_entries_simple]
-# print(lexicon)
-# print(input_tokens)
 
-# print(fast_ccg(lexicon, input_tokens))
-
-# # human_readable_output_simple = human_readable_format_simple(ccg_entries_simple)
-# # print(ccg_entries_simple)
 
 all_paths = ["/Users/paulhe/Desktop/CCG Parsing/pmb-5.1.0/src/ccg/standard", 
              "/Users/paulhe/Desktop/CCG Parsing/pmb-5.1.0/src/ccg/de_ccg",
              "/Users/paulhe/Desktop/CCG Parsing/pmb-5.1.0/src/ccg/it_ccg"]
 
-# directory_path = "/Users/paulhe/Desktop/CCG Parsing/pmb-5.1.0/src/ccg/standard"
 
 count = 0
 total = 0
@@ -193,107 +168,78 @@ for idx in range(len(all_paths)):
                     else:
                         lx_rules[mapping_language[idx]] += 1
 
-# print(total_per_lan)
-# print(lx_rules)
-# print(kulhmann_per_lan)
-print(mismatched_parses, total)
-# print(mismatched_km)
-# print(total_edges_per_lan)
-# print(kulhmann_edges_per_lan)
-
-print(f'km edges: {kulhmann_edges} / {total_edges}')
-# TODO: plot this for each of the languages
-
-# print(sorted(derivation_length_en.items(), key=lambda item: item[1], reverse=True)[:3])
-# print(sorted(derivation_length_de.items(), key=lambda item: item[1], reverse=True)[:3])
-# print(sorted(derivation_length_it.items(), key=lambda item: item[1], reverse=True)[:3])
-average_times = {
-    key: times 
-    for key, times in sorted(derivation_length_time.items(), key=lambda item: item[1])
-}
-# print(average_times)
-
-# As of Python version 3.7, dictionaries are ordered.
-naive_runtimes = {key: naive_derivation_time[key] for key in average_times.keys()}
-x = list(average_times.keys())[:5200]
-y_fast = list(average_times.values())[:5200]
-y_slow = list(naive_runtimes.values())[:5200]
-# plt.figure(figsize=(10, 6))
-# plt.plot(x, y_fast, label="FastCCG", marker='o')
-# plt.plot(x, y_slow, label="NaiveCCG", marker='o')
-# plt.title("Runtime Comparison Between Fast and Naive")
-# plt.xlabel("File")
-# plt.ylabel("Runtime (ms)")
-# plt.legend()
-# plt.grid(True)
-# plt.gca().set_xticklabels([])
-# plt.show()
 
 
-# Compute the moving average
-def moving_average(data, window_size):
-    """Compute the moving average of a list with the given window size."""
-    return np.convolve(data, np.ones(window_size) / window_size, mode='valid')
 
-# Define your data
-x = list(average_times.keys())[:5200]
-y_fast = list(average_times.values())[:5200]
-y_slow = list(naive_runtimes.values())[:5200]
+def plot_runtimes():
+    average_times = {
+        key: times 
+        for key, times in sorted(derivation_length_time.items(), key=lambda item: item[1])
+    }
 
-# Parameters for moving average
-window_size = 50  # Adjust this for your desired smoothing level
+    # As of Python version 3.7, dictionaries are ordered.
+    naive_runtimes = {key: naive_derivation_time[key] for key in average_times.keys()}
+    x = list(average_times.keys())[:5200]
+    y_fast = list(average_times.values())[:5200]
+    y_slow = list(naive_runtimes.values())[:5200]
 
-# Apply moving average to the y-values
-y_fast_smoothed = moving_average(y_fast, window_size)
-y_slow_smoothed = moving_average(y_slow, window_size)
 
-# Adjust x to match the reduced size of smoothed y-values
-x_smoothed = x[:len(y_fast_smoothed)]  # Align x with the valid range of smoothed data
+    def moving_average(data, window_size):
+        """Compute the moving average of a list with the given window size."""
+        return np.convolve(data, np.ones(window_size) / window_size, mode='valid')
 
-# Plot original and smoothed data
-plt.figure(figsize=(10, 6))
-# plt.plot(x, y_fast, label="FastCCG Original", alpha=0.4, marker='o', linestyle='--')
-plt.plot(x_smoothed, y_fast_smoothed, label="FastCCG", marker='o')
-# plt.plot(x, y_slow, label="NaiveCCG Original", alpha=0.4, marker='o', linestyle='--')
-plt.plot(x_smoothed, y_slow_smoothed, label="NaiveCCG", marker='o')
+    x = list(average_times.keys())[:5200]
+    y_fast = list(average_times.values())[:5200]
+    y_slow = list(naive_runtimes.values())[:5200]
 
-# Add titles and labels
-plt.title("Runtime Comparison Between Fast and Naive with Moving Average")
-plt.xlabel("File")
-plt.ylabel("Runtime (ms)")
-plt.legend()
-plt.grid(True)
-plt.gca().set_xticklabels([])
-plt.show()
+    window_size = 50  
 
-plt.figure(figsize=(10, 6))
-plt.plot(x, y_fast, label="FastCCG", alpha=0.4, marker='o', linestyle='--')
-# plt.plot(x_smoothed, y_fast_smoothed, label="FastCCG Smoothed", marker='o')
-plt.plot(x, y_slow, label="NaiveCCG", alpha=0.4, marker='o', linestyle='--')
-# plt.plot(x_smoothed, y_slow_smoothed, label="NaiveCCG Smoothed", marker='o')
+    y_fast_smoothed = moving_average(y_fast, window_size)
+    y_slow_smoothed = moving_average(y_slow, window_size)
 
-# Add titles and labels
-plt.title("Runtime Comparison Between Fast and Naive")
-plt.xlabel("File")
-plt.ylabel("Runtime (ms)")
-plt.legend()
-plt.grid(True)
-plt.gca().set_xticklabels([])
-plt.show()
+    x_smoothed = x[:len(y_fast_smoothed)]  
 
-# naive_runtimes = {key: naive_derivation_time[key] for key in average_times.keys()}
-# x = list(average_times.keys())[:5200]
-# y_fast = list(average_times.values())[:5200]
-# y_slow = list(naive_runtimes.values())[:5200]
-# plt.figure(figsize=(10, 6))
-# plt.plot(x, y_slow, label="NaiveCCG", marker='o')
-# plt.title("Runtime Comparison Between Fast and Naive")
-# plt.xlabel("File")
-# plt.ylabel("Runtime (ms)")
-# plt.legend()
-# plt.grid(True)
-# plt.gca().set_xticklabels([])
-# plt.show()
+    plt.figure(figsize=(10, 6))
+    # plt.plot(x, y_fast, label="FastCCG Original", alpha=0.4, marker='o', linestyle='--')
+    plt.plot(x_smoothed, y_fast_smoothed, label="FastCCG", marker='o')
+    # plt.plot(x, y_slow, label="NaiveCCG Original", alpha=0.4, marker='o', linestyle='--')
+    plt.plot(x_smoothed, y_slow_smoothed, label="NaiveCCG", marker='o')
+
+    plt.title("Runtime Comparison Between Fast and Naive with Moving Average")
+    plt.xlabel("File")
+    plt.ylabel("Runtime (ms)")
+    plt.legend()
+    plt.grid(True)
+    plt.gca().set_xticklabels([])
+    plt.show()
+
+    plt.figure(figsize=(10, 6))
+    plt.plot(x, y_fast, label="FastCCG", alpha=0.4, marker='o', linestyle='--')
+    # plt.plot(x_smoothed, y_fast_smoothed, label="FastCCG Smoothed", marker='o')
+    plt.plot(x, y_slow, label="NaiveCCG", alpha=0.4, marker='o', linestyle='--')
+    # plt.plot(x_smoothed, y_slow_smoothed, label="NaiveCCG Smoothed", marker='o')
+
+    plt.title("Runtime Comparison Between Fast and Naive")
+    plt.xlabel("File")
+    plt.ylabel("Runtime (ms)")
+    plt.legend()
+    plt.grid(True)
+    plt.gca().set_xticklabels([])
+    plt.show()
+
+    naive_runtimes = {key: naive_derivation_time[key] for key in average_times.keys()}
+    x = list(average_times.keys())[:5200]
+    y_fast = list(average_times.values())[:5200]
+    y_slow = list(naive_runtimes.values())[:5200]
+    plt.figure(figsize=(10, 6))
+    plt.plot(x, y_slow, label="NaiveCCG", marker='o')
+    plt.title("Runtime Comparison Between Fast and Naive")
+    plt.xlabel("File")
+    plt.ylabel("Runtime (ms)")
+    plt.legend()
+    plt.grid(True)
+    plt.gca().set_xticklabels([])
+    plt.show()
 
 # average_times_naive = {
 #     key: times
@@ -387,7 +333,7 @@ plt.bar(x, non_km_count, width=bar_width, bottom=kulhmann_count, label="Non-Kulh
 plt.title("Ratio of Kuhlmann Rules Applied: Per Sentence")
 plt.xlabel("Languages")
 plt.ylabel("Counts")
-plt.xticks(x, all_lang)  # Add language names as x-axis labels
+plt.xticks(x, all_lang)  
 plt.legend()
 plt.grid(axis="y", linestyle="--", alpha=0.7)
 plt.tight_layout()
@@ -400,7 +346,7 @@ plt.bar(x, non_kulhmann_edges, width=bar_width, bottom=kulhmann_edges, label="No
 plt.title("Ratio of Kuhlmann Rules Applied: Per Edge")
 plt.xlabel("Languages")
 plt.ylabel("Edges")
-plt.xticks(x, all_lang)  # Add language names as x-axis labels
+plt.xticks(x, all_lang)  
 plt.legend()
 plt.grid(axis="y", linestyle="--", alpha=0.7)
 plt.tight_layout()
